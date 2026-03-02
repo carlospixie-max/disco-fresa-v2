@@ -32,7 +32,7 @@ class BibliotecaMusical {
         const html = `
             <div id="bibliotecaMusical" style="margin: 15px 0; background: #f5f5f5; border-radius: 12px; padding: 15px; border: 1px solid #e0e0e0;">
                 <div style="font-size: 14px; color: #ff4444; margin-bottom: 10px; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 1px;">
-                    🍓 MALETA DE DISCOS
+                    MALETA DE DISCOS
                 </div>
                 
                 <div id="dropAreaBiblioteca" style="border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; text-align: center; background: white; cursor: pointer; margin-bottom: 10px;">
