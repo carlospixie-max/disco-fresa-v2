@@ -321,7 +321,7 @@ class Plato {
         this.audio.load();
         
         // Actualizar info
-        this.elements.infoTrack.innerHTML = `📀 ${archivo.name}`;
+        this.elements.infoTrack.innerHTML = ` ${archivo.name}`;
         
         // Resetear estado
         this.isPlaying = false;
@@ -336,6 +336,9 @@ class Plato {
         
         // Resetear punto de progreso
         this.elements.discoProgressPoint.style.right = '0%';
+        
+        // Limpiar imagen anterior
+        this.elements.label.innerHTML = '🍓';
         
         // Extraer metadatos
         if (typeof jsmediatags !== 'undefined') {
