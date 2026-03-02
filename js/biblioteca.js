@@ -1,500 +1,605 @@
-// ==========================================
-// CLASE PLATO - Encapsula todo lo relacionado con un plato
-// ==========================================
+// biblioteca.js - Módulo de biblioteca musical para Disco Fresa
+// Versión 2.2 - Modo automático simplificado sin crossfade
 
-class Plato {
-    constructor(numero, audioContext) {
-        this.numero = numero;
-        this.audioContext = audioContext;
-        this.audio = document.getElementById(CONFIG.SELECTORS.AUDIO(numero));
+class BibliotecaMusical {
+    constructor() {
+        this.canciones = [];
+        this.cancionArrastrada = null;
+        this.indiceArrastrado = null;
+        this.modoAutomatico = false;
+        this.indiceActual = 0;
+        this.platoActivo = 1;
+        this.platoIndices = { 1: null, 2: null };
         
-        // Estado
-        this.isPlaying = false;
-        this.stopCount = 0;
-        this.isDragging = false;
-        this.stopFadeOut = null;
-        
-        // Nodos de audio
-        this.nodes = {};
-        
-        // Elementos DOM cacheados
-        this.elements = {};
-        this.cacheElements();
-        
-        // Inicializar
-        this.initAudioNodes();
-        this.initEvents();
-        this.initProgressBar();
-        this.initDiscoProgress();
+        this.init();
     }
     
-    cacheElements() {
-        const s = CONFIG.SELECTORS;
+    init() {
+        this.crearHTML();
+        this.cacheElementos();
+        this.initEventos();
+        this.initPlatoDrop();
+        this.initModoAutomatico();
+        this.initEventosGlobales();
+    }
+    
+    crearHTML() {
+        if (document.getElementById('bibliotecaMusical')) return;
+        
+        const maleta = document.querySelector('.consola-maleta');
+        if (!maleta) return;
+        
+        const html = `
+            <div id="bibliotecaMusical" style="margin: 15px 0; background: #f5f5f5; border-radius: 12px; padding: 15px; border: 1px solid #e0e0e0;">
+                <div style="font-size: 14px; color: #ff4444; margin-bottom: 10px; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 1px;">
+                    MALETA DE DISCOS
+                </div>
+                
+                <div id="dropAreaBiblioteca" style="border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; text-align: center; background: white; cursor: pointer; margin-bottom: 10px;">
+                    <span style="font-size: 24px;">📂</span>
+                    <p style="margin: 5px 0;">Arrastra archivos de música</p>
+                    <p style="font-size: 11px; margin: 0;">o haz clic para seleccionar</p>
+                </div>
+                
+                <input type="file" id="fileInputBiblioteca" style="display: none;" multiple accept="audio/*">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; font-size: 12px;">
+                    <span><strong>Total:</strong> <span id="totalCancionesBib">0</span></span>
+                    <button id="limpiarBiblioteca" style="background: #ff4444; color: white; border: none; padding: 5px 12px; border-radius: 15px; cursor: pointer; font-size: 11px;">🗑️ Limpiar</button>
+                </div>
+                
+                <div id="songListBiblioteca" style="background: white; border-radius: 10px; padding: 10px; max-height: 400px; min-height: 300px; overflow-y: auto; border: 1px solid #ddd;">
+                    <div style="text-align: center; color: #999; padding: 20px;">
+                        📀 Arrastra archivos para comenzar
+                    </div>
+                </div>
+                
+                <p style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">
+                    <small>Arrastra canciones a los platos para cargarlas</small>
+                </p>
+            </div>
+        `;
+        
+        const creditos = maleta.querySelector('.maleta-footer');
+        if (creditos) {
+            creditos.insertAdjacentHTML('beforebegin', html);
+        } else {
+            maleta.insertAdjacentHTML('beforeend', html);
+        }
+    }
+    
+    cacheElementos() {
         this.elements = {
-            disco: document.getElementById(s.DISCO(this.numero)),
-            playBtn: document.getElementById(s.PLAY_BTN(this.numero)),
-            stopBtn: document.getElementById(s.STOP_BTN(this.numero)),
-            fileInput: document.getElementById(s.FILE_INPUT(this.numero)),
-            infoTrack: document.getElementById(s.INFO_TRACK(this.numero)),
-            label: document.getElementById(s.LABEL(this.numero)),
-            gain: document.getElementById(s.GAIN(this.numero)),
-            gainVal: document.getElementById(s.GAIN_VAL(this.numero)),
-            gainFill: document.getElementById(s.GAIN_FILL(this.numero)),
-            vol: document.getElementById(s.VOL(this.numero)),
-            volVal: document.getElementById(s.VOL_VAL(this.numero)),
-            volFill: document.getElementById(s.VOL_FILL(this.numero)),
-            eqLow: document.getElementById(s.EQ_LOW(this.numero)),
-            eqMid: document.getElementById(s.EQ_MID(this.numero)),
-            eqHigh: document.getElementById(s.EQ_HIGH(this.numero)),
-            eqLowVal: document.getElementById(s.EQ_LOW_VAL(this.numero)),
-            eqMidVal: document.getElementById(s.EQ_MID_VAL(this.numero)),
-            eqHighVal: document.getElementById(s.EQ_HIGH_VAL(this.numero)),
-            eqLowFill: document.getElementById(s.EQ_LOW_FILL(this.numero)),
-            eqMidFill: document.getElementById(s.EQ_MID_FILL(this.numero)),
-            eqHighFill: document.getElementById(s.EQ_HIGH_FILL(this.numero)),
-            pitch: document.getElementById(s.PITCH(this.numero)),
-            pitchVal: document.getElementById(s.PITCH_VAL(this.numero)),
-            pitchFill: document.getElementById(s.PITCH_FILL(this.numero)),
-            rpmDisplay: document.getElementById(s.RPM_DISPLAY(this.numero)),
-            progressBar: document.getElementById(s.PROGRESS_BAR(this.numero)),
-            progressFill: document.getElementById(s.PROGRESS_FILL(this.numero)),
-            progressCurrent: document.getElementById(s.PROGRESS_CURRENT(this.numero)),
-            progressTotal: document.getElementById(s.PROGRESS_TOTAL(this.numero)),
-            discoProgressContainer: document.getElementById(s.DISCO_PROGRESS_CONTAINER(this.numero)),
-            discoProgressPoint: document.getElementById(s.DISCO_PROGRESS_POINT(this.numero)),
-            btnSuperior: document.getElementById(`btn-superior${this.numero}`),
+            dropArea: document.getElementById('dropAreaBiblioteca'),
+            fileInput: document.getElementById('fileInputBiblioteca'),
+            songList: document.getElementById('songListBiblioteca'),
+            totalSpan: document.getElementById('totalCancionesBib'),
+            limpiarBtn: document.getElementById('limpiarBiblioteca'),
         };
     }
     
-    initAudioNodes() {
-        try {
-            this.nodes.source = this.audioContext.createMediaElementSource(this.audio);
-            this.nodes.gain = this.audioContext.createGain();
-            this.nodes.lowFilter = this.audioContext.createBiquadFilter();
-            this.nodes.midFilter = this.audioContext.createBiquadFilter();
-            this.nodes.highFilter = this.audioContext.createBiquadFilter();
-            
-            // Configurar filtros EQ
-            const eq = CONFIG.EQ;
-            this.nodes.lowFilter.type = 'lowshelf';
-            this.nodes.lowFilter.frequency.value = eq.LOW_FREQ;
-            this.nodes.lowFilter.gain.value = CONFIG.AUDIO.EQ_DEFAULT;
-            
-            this.nodes.midFilter.type = 'peaking';
-            this.nodes.midFilter.frequency.value = eq.MID_FREQ;
-            this.nodes.midFilter.Q.value = eq.MID_Q;
-            this.nodes.midFilter.gain.value = CONFIG.AUDIO.EQ_DEFAULT;
-            
-            this.nodes.highFilter.type = 'highshelf';
-            this.nodes.highFilter.frequency.value = eq.HIGH_FREQ;
-            this.nodes.highFilter.gain.value = CONFIG.AUDIO.EQ_DEFAULT;
-            
-            // Conectar cadena de audio
-            this.nodes.source.connect(this.nodes.gain);
-            this.nodes.gain.connect(this.nodes.lowFilter);
-            this.nodes.lowFilter.connect(this.nodes.midFilter);
-            this.nodes.midFilter.connect(this.nodes.highFilter);
-            this.nodes.highFilter.connect(this.audioContext.destination);
-            
-            // Valores iniciales
-            this.nodes.gain.gain.value = 1;
-            this.audio.volume = CONFIG.AUDIO.VOLUMEN_DEFAULT / 100;
-            this.audio.playbackRate = CONFIG.AUDIO.PITCH_DEFAULT;
-            
-        } catch (error) {
-            console.error(`Error inicializando audio del plato ${this.numero}:`, error);
-        }
-    }
-    
-    initEvents() {
-        // Botón superior (cargar archivo)
-        this.elements.btnSuperior.addEventListener('click', () => {
-            this.elements.fileInput.click();
+    initEventos() {
+        const { dropArea, fileInput, limpiarBtn } = this.elements;
+        
+        document.addEventListener('dragover', (e) => e.preventDefault());
+        document.addEventListener('drop', (e) => e.preventDefault());
+        
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.style.background = '#ffe0b0';
+            dropArea.style.borderColor = '#ff6600';
         });
         
-        // Input de archivo
-        this.elements.fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                this.cargarArchivo(e.target.files[0]);
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.style.background = 'white';
+            dropArea.style.borderColor = '#e0e0e0';
+        });
+        
+        dropArea.addEventListener('drop', (e) => this.handleDrop(e));
+        dropArea.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => {
+            this.procesarArchivos(Array.from(e.target.files));
+            fileInput.value = '';
+        });
+        
+        limpiarBtn?.addEventListener('click', () => this.limpiar());
+    }
+    
+    initEventosGlobales() {
+        window.addEventListener('cancionTermino', (e) => {
+            console.log('Canción terminó en plato:', e.detail.plato);
+            if (this.modoAutomatico) {
+                this.siguienteCancion(e.detail.plato);
             }
+            this.actualizarLista();
         });
         
-        // Play
-        this.elements.playBtn.addEventListener('click', () => this.togglePlay());
-        
-        // Stop
-        this.elements.stopBtn.addEventListener('click', () => this.handleStop());
-        
-        // Ganancia
-        this.elements.gain.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            this.nodes.gain.gain.value = Math.pow(10, val / 20);
-            this.elements.gainVal.textContent = val.toFixed(1);
-            this.updateFill(this.elements.gainFill, val, CONFIG.EQ.GANANCIA_MIN, CONFIG.EQ.GANANCIA_MAX);
+            window.addEventListener('cancionEmpezo', () => {
+                this.actualizarLista();
         });
-        
-        // Volumen
-        this.elements.vol.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            this.audio.volume = val / 100;
-            this.elements.volVal.textContent = val;
-            this.elements.volFill.style.width = val + '%';
-            this.elements.volFill.style.left = '0%';
-        });
-        
-        // EQ Low
-        this.elements.eqLow.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            this.nodes.lowFilter.gain.value = val;
-            this.elements.eqLowVal.textContent = val.toFixed(1);
-            this.updateEQFill(this.elements.eqLowFill, val);
-        });
-        
-        // EQ Mid
-        this.elements.eqMid.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            this.nodes.midFilter.gain.value = val;
-            this.elements.eqMidVal.textContent = val.toFixed(1);
-            this.updateEQFill(this.elements.eqMidFill, val);
-        });
-        
-        // EQ High
-        this.elements.eqHigh.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            this.nodes.highFilter.gain.value = val;
-            this.elements.eqHighVal.textContent = val.toFixed(1);
-            this.updateEQFill(this.elements.eqHighFill, val);
-        });
-        
-        // Pitch
-        this.elements.pitch.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            this.audio.playbackRate = val;
-            const porcentaje = ((val - 1) * 100).toFixed(1);
-            const signo = porcentaje > 0 ? '+' : '';
-            this.elements.pitchVal.textContent = `${signo}${porcentaje}`;
-            
-            const rpm = (CONFIG.AUDIO.RPM_BASE * val).toFixed(1);
-            this.elements.rpmDisplay.textContent = `${rpm} RPM`;
-            
-            this.updatePitchFill(val);
-        });
-        
-        // Evento cuando termina la canción
-        this.audio.addEventListener('ended', () => {
-            this.isPlaying = false;
-            this.elements.playBtn.classList.remove('reproduciendo');
-            this.elements.disco.classList.remove('girando');
-            this.stopCount = 0;
-            this.elements.stopBtn.classList.remove('parando');
-            if (this.stopFadeOut) {
-                clearInterval(this.stopFadeOut);
-                this.stopFadeOut = null;
-            }
-            
-            // Notificar a la biblioteca
-            window.dispatchEvent(new CustomEvent('cancionTermino', { 
-                detail: { plato: this.numero } 
-            }));
+    
+            window.addEventListener('cancionPauso', () => {
+                this.actualizarLista();
         });
     }
-    
-    async togglePlay() {
-        if (!this.audio.src) return;
-        
-        if (this.isPlaying) {
-            this.audio.pause();
-            this.isPlaying = false;
-            this.elements.playBtn.classList.remove('reproduciendo');
-            this.elements.disco.classList.remove('girando');
-            this.stopCount = 0;
+  
+    initPlatoDrop() {
+        [1, 2].forEach(num => {
+            const plato = document.querySelector(`.consola[data-plato="${num}"] .plato`);
+            if (!plato) return;
             
-            window.dispatchEvent(new CustomEvent('cancionPauso', { 
-                detail: { plato: this.numero } 
-            }));
-        } else {
-            if (this.audioContext.state === 'suspended') {
-                await this.audioContext.resume();
-            }
+            plato.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                plato.style.opacity = '0.8';
+                plato.style.border = '3px solid #ff9900';
+            });
             
-            await this.audio.play();
-            this.isPlaying = true;
-            this.elements.playBtn.classList.add('reproduciendo');
-            this.elements.disco.classList.add('girando');
-            this.stopCount = 0;
+            plato.addEventListener('dragleave', () => {
+                plato.style.opacity = '1';
+                plato.style.border = '2px solid #333';
+            });
             
-            window.dispatchEvent(new CustomEvent('cancionEmpezo', { 
-                detail: { plato: this.numero } 
-            }));
-        }
-    }
-    
-    handleStop() {
-        if (!this.audio.src) return;
-        
-        this.stopCount++;
-        
-        if (this.isPlaying && !this.stopFadeOut) {
-            // Primer click: fade out suave
-            this.fadeOut(CONFIG.TIMING.FADE_OUT_STOP);
-        } else if (!this.isPlaying && this.stopCount === 2) {
-            // Segundo click cuando está parado: resetear a 0
-            this.audio.currentTime = 0;
-            this.stopCount = 0;
-        } else if (this.stopFadeOut && this.stopCount === 2) {
-            // Segundo click durante fade: parar inmediatamente
-            clearInterval(this.stopFadeOut);
-            this.stopFadeOut = null;
-            this.audio.pause();
-            this.audio.currentTime = 0;
-            this.audio.playbackRate = CONFIG.AUDIO.PITCH_DEFAULT;
-            this.isPlaying = false;
-            this.elements.playBtn.classList.remove('reproduciendo');
-            this.elements.disco.classList.remove('girando');
-            this.elements.stopBtn.classList.remove('parando');
-            
-            // Resetear pitch UI
-            this.elements.pitch.value = CONFIG.AUDIO.PITCH_DEFAULT;
-            this.elements.pitch.dispatchEvent(new Event('input'));
-            this.updatePitchFill(CONFIG.AUDIO.PITCH_DEFAULT);
-            
-            this.stopCount = 0;
-        }
-    }
-    
-    fadeOut(duracion) {
-        const audio = this.audio;
-        const btn = this.elements.playBtn;
-        const stopBtn = this.elements.stopBtn;
-        const disco = this.elements.disco;
-        
-        const originalRate = audio.playbackRate;
-        const steps = CONFIG.TIMING.STOP_STEPS;
-        let step = 0;
-        const stepTime = duracion / steps;
-        
-        const originalGain = this.nodes.gain.gain.value;
-        
-        stopBtn.classList.add('parando');
-        
-        this.stopFadeOut = setInterval(() => {
-            step++;
-            const progress = step / steps;
-            
-            audio.playbackRate = originalRate * (1 - progress * 0.8);
-            this.nodes.gain.gain.value = originalGain * (1 - progress);
-            
-            if (step >= steps) {
-                clearInterval(this.stopFadeOut);
-                this.stopFadeOut = null;
-                stopBtn.classList.remove('parando');
+            plato.addEventListener('drop', (e) => {
+                e.preventDefault();
+                plato.style.opacity = '1';
+                plato.style.border = '2px solid #333';
                 
-                audio.pause();
-                audio.currentTime = 0;
-                
-                // Restaurar valores
-                audio.playbackRate = originalRate;
-                this.nodes.gain.gain.value = originalGain;
-                
-                this.isPlaying = false;
-                btn.classList.remove('reproduciendo');
-                disco.classList.remove('girando');
-                this.stopCount = 0;
-                
-                window.dispatchEvent(new CustomEvent('cancionTermino', { 
-                    detail: { plato: this.numero } 
-                }));
-            }
-        }, stepTime);
-    }
-    
-    cargarArchivo(archivo) {
-        // Limpiar fade anterior si existe
-        if (this.stopFadeOut) {
-            clearInterval(this.stopFadeOut);
-            this.stopFadeOut = null;
-            this.elements.stopBtn.classList.remove('parando');
-        }
-        
-        const url = URL.createObjectURL(archivo);
-        this.audio.src = url;
-        this.audio.load();
-        
-        // Actualizar info
-        this.elements.infoTrack.innerHTML = ` ${archivo.name}`;
-        
-        // Resetear estado
-        this.isPlaying = false;
-        this.elements.playBtn.classList.remove('reproduciendo');
-        this.elements.disco.classList.remove('girando');
-        this.stopCount = 0;
-        
-        // Resetear pitch
-        this.elements.pitch.value = CONFIG.AUDIO.PITCH_DEFAULT;
-        this.elements.pitch.dispatchEvent(new Event('input'));
-        this.updatePitchFill(CONFIG.AUDIO.PITCH_DEFAULT);
-        
-        // Resetear punto de progreso
-        this.elements.discoProgressPoint.style.right = '0%';
-        
-        // Limpiar imagen anterior
-        this.elements.label.innerHTML = '🍓';
-        
-        // Extraer metadatos
-        if (typeof jsmediatags !== 'undefined') {
-            jsmediatags.read(archivo, {
-                onSuccess: (tag) => {
-                    if (tag.tags.picture) {
-                        const picture = tag.tags.picture;
-                        const base64 = this.arrayBufferToBase64(picture.data);
-                        this.elements.label.innerHTML = 
-                            `<img src="data:${picture.format};base64,${base64}" style="width: 100%; height: 100%; object-fit: cover;">`;
-                    }
+                const index = parseInt(e.dataTransfer.getData('text/plain'));
+                if (!isNaN(index) && this.canciones[index]) {
+                    this.cargarEnPlato(this.canciones[index], num);
                 }
             });
-        }
-        
-        // NOTIFICACIÓN A BIBLIOTECA ELIMINADA - causaba duplicados
-        // La carga a biblioteca se maneja desde biblioteca.js directamente
-    }
-    
-    initProgressBar() {
-        // Click en barra de progreso
-        this.elements.progressBar.addEventListener('click', (e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            if (this.audio.duration) {
-                this.audio.currentTime = pos * this.audio.duration;
-            }
         });
     }
     
-    initDiscoProgress() {
-        const container = this.elements.discoProgressContainer;
-        const punto = this.elements.discoProgressPoint;
+    handleDrop(e) {
+        e.preventDefault();
+        const { dropArea } = this.elements;
         
-        const updatePosition = (clientX) => {
-            const rect = container.getBoundingClientRect();
-            let pos = (clientX - rect.left) / rect.width;
-            pos = Math.max(0, Math.min(1, pos));
-            
-            // Invertir: izquierda = final, derecha = inicio
-            const audioProgress = 1 - pos;
-            
-            punto.style.right = (audioProgress * 100) + '%';
-            
-            if (this.audio.duration) {
-                this.audio.currentTime = audioProgress * this.audio.duration;
+        dropArea.style.background = 'white';
+        dropArea.style.borderColor = '#e0e0e0';
+        
+        const index = e.dataTransfer.getData('text/plain');
+        
+        if (index) {
+            const cancionIndex = parseInt(index);
+            if (this.canciones[cancionIndex] && !this.canciones.some(c => c.id === this.canciones[cancionIndex].id)) {
+                this.canciones.push(this.canciones[cancionIndex]);
+                this.actualizarLista();
             }
-            
-            this.elements.progressFill.style.width = (audioProgress * 100) + '%';
-            this.elements.progressCurrent.textContent = this.formatTime(this.audio.currentTime);
-        };
-        
-        const handleStart = (e) => {
-            if (!this.audio.src || !this.audio.duration) return;
-            this.isDragging = true;
-            container.classList.add('dragging');
-            e.preventDefault();
-            
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            if (clientX) updatePosition(clientX);
-        };
-        
-        const handleMove = (e) => {
-            if (!this.isDragging) return;
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            if (clientX) updatePosition(clientX);
-        };
-        
-        const handleEnd = () => {
-            if (this.isDragging) {
-                this.isDragging = false;
-                container.classList.remove('dragging');
-            }
-        };
-        
-        // Eventos
-        container.addEventListener('mousedown', handleStart);
-        document.addEventListener('mousemove', handleMove);
-        document.addEventListener('mouseup', handleEnd);
-        
-        container.addEventListener('touchstart', handleStart, { passive: false });
-        document.addEventListener('touchmove', handleMove, { passive: false });
-        document.addEventListener('touchend', handleEnd);
-        
-        container.addEventListener('click', (e) => {
-            if (!this.audio.src || !this.audio.duration) return;
-            updatePosition(e.clientX);
-            e.stopPropagation();
-        });
-    }
-    
-    updateProgress() {
-        if (this.audio.duration && !this.isDragging) {
-            const progress = (this.audio.currentTime / this.audio.duration) * 100;
-            
-            this.elements.progressFill.style.width = progress + '%';
-            this.elements.progressCurrent.textContent = this.formatTime(this.audio.currentTime);
-            this.elements.progressTotal.textContent = this.formatTime(this.audio.duration);
-            
-            // Actualizar punto en el disco
-            this.elements.discoProgressPoint.style.right = progress + '%';
+        } else {
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('audio/'));
+            if (files.length) this.procesarArchivos(files);
         }
     }
     
-    // Utilidades UI
-updateFill(element, val, min, max) {
-    const rango = max - min; // 24
-    const porcentaje = ((val - min) / rango); // 0 a 1
+    async procesarArchivos(files) {
+        const archivosAudio = files.filter(f => f.type.startsWith('audio/'));
+        
+        for (const file of archivosAudio) {
+            const cancion = await this.crearCancion(file);
+            this.canciones.push(cancion);
+        }
+        
+        this.actualizarLista();
+    }
     
-    // Para controles centrados (0 en medio)
-    if (val === 0) {
-        element.style.left = '50%';
-        element.style.width = '0%';
-    } else if (val > 0) {
-        // De 50% a la derecha
-        const ancho = (val / max) * 50; // proporción de la mitad derecha
-        element.style.left = '50%';
-        element.style.width = ancho + '%';
-    } else {
-        // De 50% a la izquierda
-        const ancho = (Math.abs(val) / Math.abs(min)) * 50; // proporción de la mitad izquierda
-        element.style.left = (50 - ancho) + '%';
-        element.style.width = ancho + '%';
+    crearCancion(file) {
+        return new Promise((resolve) => {
+            const url = URL.createObjectURL(file);
+            const tempAudio = new Audio();
+            tempAudio.src = url;
+            
+            let caratula = null;
+            let caratulaLista = false;
+            
+            if (typeof jsmediatags !== 'undefined') {
+                try {
+                    jsmediatags.read(file, {
+                        onSuccess: (tag) => {
+                            if (tag.tags?.picture) {
+                                caratula = this.arrayBufferToBase64(tag.tags.picture.data);
+                                caratula = `data:${tag.tags.picture.format};base64,${caratula}`;
+                            }
+                            caratulaLista = true;
+                        },
+                        onError: () => { caratulaLista = true; }
+                    });
+                } catch (e) {
+                    caratulaLista = true;
+                }
+            } else {
+                caratulaLista = true;
+            }
+            
+            const completar = () => {
+                const cancion = {
+                    id: Date.now() + Math.random(),
+                    nombre: file.name.replace(/\.[^/.]+$/, ""),
+                    archivo: file,
+                    url: url,
+                    tipo: file.type.split('/')[1].toUpperCase(),
+                    duracion: this.formatTime(tempAudio.duration),
+                    caratula: caratula
+                };
+                URL.revokeObjectURL(url);
+                resolve(cancion);
+            };
+            
+            tempAudio.onloadedmetadata = () => {
+                if (caratulaLista) completar();
+                else setTimeout(completar, 300);
+            };
+            
+            tempAudio.onerror = () => {
+                const cancion = {
+                    id: Date.now() + Math.random(),
+                    nombre: file.name.replace(/\.[^/.]+$/, ""),
+                    archivo: file,
+                    url: url,
+                    tipo: file.type.split('/')[1].toUpperCase(),
+                    duracion: '--:--',
+                    caratula: caratula
+                };
+                URL.revokeObjectURL(url);
+                resolve(cancion);
+            };
+        });
+    }
+    
+    actualizarLista() {
+        const { songList, totalSpan } = this.elements;
+        
+        if (!songList) return;
+        
+        if (this.canciones.length === 0) {
+            songList.innerHTML = `<div style="text-align: center; color: #999; padding: 20px;">📀 Arrastra archivos para comenzar</div>`;
+            if (totalSpan) totalSpan.textContent = '0';
+            return;
+        }
+        
+            // OBTENER AUDIOS DESDE CONSOLADJ, NO DEL DOM
+const plato1 = window.consolaDJ?.getPlato(1);
+const plato2 = window.consolaDJ?.getPlato(2);
+const audio1 = plato1?.audio;
+const audio2 = plato2?.audio;
+        
+        let html = '';
+        this.canciones.forEach((cancion, index) => {
+            const style = this.getEstiloCancion(index, audio1, audio2);
+            const miniatura = cancion.caratula 
+                ? `<img src="${cancion.caratula}" style="width: 100%; height: 100%; object-fit: cover;">`
+                : `<span style="font-size: 16px;">🎵</span>`;
+            
+            html += `
+                <div class="song-item" draggable="true" 
+                     data-index="${index}"
+                     ondragstart="biblioteca.dragStart(event, ${index})"
+                     ondragend="biblioteca.dragEnd(event)"
+                     ondragover="biblioteca.dragOver(event)"
+                     ondrop="biblioteca.dropSong(event, ${index})"
+                     style="background: #f8f9fa; padding: 8px; margin: 6px 0; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; cursor: move; gap: 8px;">
+                    
+                    <span class="song-number" style="width: 24px; height: 24px; ${style.numero} color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0;">
+                        ${index + 1}
+                    </span>
+                    
+                    <div style="width: 35px; height: 35px; background: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; border: 1px solid #ddd;">
+                        ${miniatura}
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: bold; color: #333; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${cancion.nombre}">
+                            ${cancion.nombre}
+                        </div>
+                        <div style="font-size: 11px; color: #666; display: flex; gap: 10px;">
+                            <span>${cancion.tipo}</span>
+                            <span>${cancion.duracion}</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="biblioteca.eliminarCancion(${index})" 
+                            style="background: transparent; color: #ff4444; border: none; padding: 5px; cursor: pointer; font-size: 16px; flex-shrink: 0;">
+                        🗑️
+                    </button>
+                </div>
+            `;
+        });
+        
+        songList.innerHTML = html;
+        if (totalSpan) totalSpan.textContent = this.canciones.length;
+    }
+    
+    getEstiloCancion(index, audio1, audio2) {
+        const sonando1 = this.platoIndices[1] === index && audio1 && !audio1.paused && !audio1.ended;
+        const sonando2 = this.platoIndices[2] === index && audio2 && !audio2.paused && !audio2.ended;
+        
+        if (sonando1 || sonando2) {
+            return { numero: 'background: #ffd700;' }; // amarillo cuando suena
+        }
+
+        return { numero: 'background: #ff9900;' };
+    }
+    
+    dragStart(e, index) {
+        this.cancionArrastrada = this.canciones[index];
+        this.indiceArrastrado = index;
+        e.target.style.opacity = '0.5';
+        e.dataTransfer.setData('text/plain', index.toString());
+        e.dataTransfer.effectAllowed = 'move';
+    }
+    
+    dragEnd(e) {
+        e.target.style.opacity = '1';
+    }
+    
+    dragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+    
+    dropSong(e, targetIndex) {
+        e.preventDefault();
+        
+        if (this.indiceArrastrado === null || this.indiceArrastrado === targetIndex) return;
+        
+        const oldIndices = { ...this.platoIndices };
+        
+        const [removed] = this.canciones.splice(this.indiceArrastrado, 1);
+        this.canciones.splice(targetIndex, 0, removed);
+        
+        const actualizarIndice = (old) => {
+            if (old === null) return null;
+            if (old === this.indiceArrastrado) return targetIndex;
+            if (old > this.indiceArrastrado && old <= targetIndex) return old - 1;
+            if (old < this.indiceArrastrado && old >= targetIndex) return old + 1;
+            return old;
+        };
+        
+        this.platoIndices[1] = actualizarIndice(oldIndices[1]);
+        this.platoIndices[2] = actualizarIndice(oldIndices[2]);
+        
+        if (this.modoAutomatico) {
+            this.indiceActual = actualizarIndice(this.indiceActual);
+        }
+        
+        this.indiceArrastrado = null;
+        this.actualizarLista();
+    }
+    
+    cargarEnPlato(cancion, platoNum) {
+        const plato = window.consolaDJ.getPlato(platoNum);
+        if (!plato || !cancion.archivo) {
+            console.error(`No se puede cargar: plato ${platoNum} no disponible o sin archivo`);
+            return;
+        }
+        
+        // Verificar si la canción ya está en la biblioteca para evitar duplicados
+        const yaExiste = this.canciones.some(c => c.id === cancion.id);
+        if (!yaExiste) {
+            // Solo añadir si no existe (por si acaso)
+            this.canciones.push(cancion);
+            this.actualizarLista();
+        }
+        
+        plato.cargarArchivo(cancion.archivo);
+        
+        const infoTrack = document.getElementById(`infoTrack${platoNum}`);
+        const label = document.getElementById(`label${platoNum}`);
+        
+        if (infoTrack) infoTrack.innerHTML = ` ${cancion.nombre}`;
+        
+        if (label && cancion.caratula) {
+            label.innerHTML = `<img src="${cancion.caratula}" style="width: 100%; height: 100%; object-fit: cover;" draggable="false">`;
+        }
+        const index = this.canciones.findIndex(c => c.id === cancion.id);
+        this.platoIndices[platoNum] = index;
+        console.log(`Cargada "${cancion.nombre}" en plato ${platoNum}, índice ${index}`);
+    
+        // Si estamos en modo automático y el usuario carga un disco manualmente
+        if (this.modoAutomatico) {
+            // Este plato pasa a ser el siguiente en reproducirse
+            this.platoActivo = platoNum;
+            console.log(`Modo auto: disco manual cargado en plato ${platoNum}, será el siguiente en reproducirse`);
     }
 }
+
+    // ==================== MODO AUTOMÁTICO SIMPLIFICADO ====================
     
-    updateEQFill(element, val) {
-        if (val >= 0) {
-            const ancho = (val / 12) * 50;
-            element.style.left = '50%';
-            element.style.width = ancho + '%';
-        } else {
-            const ancho = (Math.abs(val) / 12) * 50;
-            element.style.left = (50 - ancho) + '%';
-            element.style.width = ancho + '%';
-        }
-    }
-    
-    updatePitchFill(val) {
-        const fill = this.elements.pitchFill;
-        const max = CONFIG.AUDIO.PITCH_MAX;
-        const min = CONFIG.AUDIO.PITCH_MIN;
-        const MAX_WIDTH = 50;
+    initModoAutomatico() {
+        const selector = document.getElementById('selectorModoRange');
+        const thumb = document.getElementById('selectorModoThumb');
+        const fill = document.getElementById('selectorModoFill');
         
-        if (val >= 1.0) {
-            let ancho = ((val - 1.0) / (max - 1.0)) * MAX_WIDTH;
-            ancho = Math.min(ancho, MAX_WIDTH);
-            fill.style.left = '50%';
-            fill.style.width = ancho + '%';
-        } else {
-            let ancho = ((1.0 - val) / (1.0 - min)) * MAX_WIDTH;
-            ancho = Math.min(ancho, MAX_WIDTH);
-            fill.style.left = (50 - ancho) + '%';
-            fill.style.width = ancho + '%';
-        }
+        if (!selector) return;
+        
+        const actualizarUI = (modoAuto) => {
+            if (modoAuto) {
+                thumb.style.left = '100%';
+                fill.style.width = '50%';
+                fill.style.left = '50%';
+            } else {
+                thumb.style.left = '0%';
+                fill.style.width = '50%';
+                fill.style.left = '0';
+            }
+        };
+        
+        selector.addEventListener('input', (e) => {
+            const valor = parseInt(e.target.value);
+            const modoAuto = valor === 1;
+            
+            actualizarUI(modoAuto);
+            
+            if (this.modoAutomatico && !modoAuto) {
+                this.modoAutomatico = false;
+            } else if (!this.modoAutomatico && modoAuto) {
+                this.modoAutomatico = true;
+                if (this.canciones.length > 0) {
+                    this.iniciarModoAutomatico();
+                }
+            }
+        });
     }
+    
+    iniciarModoAutomatico() {
+        console.log('🎵 INICIANDO MODO AUTOMÁTICO');
+        
+        this.indiceActual = 0;
+        this.platoActivo = 1;
+        
+        // Limpiar ambos platos
+        this.limpiarPlato(1);
+        this.limpiarPlato(2);
+        
+        // Cargar primera canción en plato 1
+        console.log(`Cargando canción 0 en plato 1: ${this.canciones[0].nombre}`);
+        this.cargarEnPlato(this.canciones[0], 1);
+        
+        this.actualizarLista();
+        
+        // Reproducir plato 1
+        setTimeout(() => {
+            const plato1 = window.consolaDJ.getPlato(1);
+            if (plato1) {
+                console.log('Reproduciendo plato 1');
+                plato1.reproducir();
+            }
+        }, 500);
+    }
+    
+    siguienteCancion(platoQueTermino) {
+        console.log(`\n=== SIGUIENTE CANCIÓN ===`);
+        console.log(`Plato que terminó: ${platoQueTermino}`);
+        console.log(`Índice actual antes: ${this.indiceActual}`);
+        
+        // Avanzar al siguiente índice
+        this.indiceActual++;
+        
+        // Verificar si hay más canciones
+        if (this.indiceActual >= this.canciones.length) {
+            console.log('Fin de la colección');
+            this.modoAutomatico = false;
+            // Resetear UI del selector
+            const selector = document.getElementById('selectorModoRange');
+            const thumb = document.getElementById('selectorModoThumb');
+            const fill = document.getElementById('selectorModoFill');
+            if (selector) selector.value = 0;
+            if (thumb) thumb.style.left = '0%';
+            if (fill) {
+                fill.style.width = '50%';
+                fill.style.left = '0';
+            }
+            return;
+        }
+        
+        // Determinar el otro plato (el que va a reproducir)
+        const otroPlato = platoQueTermino === 1 ? 2 : 1;
+        
+        console.log(`Nuevo índice: ${this.indiceActual}`);
+        console.log(`Canción a reproducir: ${this.canciones[this.indiceActual].nombre}`);
+        console.log(`Se reproducirá en plato: ${otroPlato}`);
+        
+        // Cargar la siguiente canción en el plato que va a reproducir
+        this.cargarEnPlato(this.canciones[this.indiceActual], otroPlato);
+        
+        // Reproducir el otro plato
+        const platoObj = window.consolaDJ.getPlato(otroPlato);
+        if (platoObj) {
+            setTimeout(() => {
+                console.log(`Iniciando reproducción en plato ${otroPlato}`);
+                platoObj.reproducir();
+            }, 100);
+        }
+        
+        // === PRECARGA: Calcular índice del siguiente disco y cargarlo en el plato que terminó ===
+        const siguienteIndice = this.indiceActual + 1;
+        
+        if (siguienteIndice < this.canciones.length) {
+            console.log(`Programando precarga en plato ${platoQueTermino} para índice ${siguienteIndice} en 5 segundos`);
+            
+            setTimeout(() => {
+                // Solo cargar si seguimos en modo automático y no se ha cambiado manualmente
+                if (this.modoAutomatico && this.platoIndices[platoQueTermino] !== siguienteIndice) {
+                    console.log(`Precargando "${this.canciones[siguienteIndice].nombre}" en plato ${platoQueTermino}`);
+                    this.cargarEnPlato(this.canciones[siguienteIndice], platoQueTermino);
+                }
+            }, 5000); // 5 segundos de delay
+        }
+        
+        this.platoActivo = otroPlato;
+        this.actualizarLista();
+    }
+    
+    limpiarPlato(numero) {
+        const plato = window.consolaDJ.getPlato(numero);
+        if (plato) {
+            plato.audio.pause();
+            plato.audio.currentTime = 0;
+            plato.audio.src = '';
+            plato.isPlaying = false;
+            plato.stopCount = 0;
+            if (plato.stopFadeOut) {
+                clearInterval(plato.stopFadeOut);
+                plato.stopFadeOut = null;
+            }
+            
+            plato.elements.disco.classList.remove('girando');
+            plato.elements.playBtn.classList.remove('reproduciendo');
+            plato.elements.stopBtn.classList.remove('parando');
+            plato.elements.infoTrack.innerHTML = '<span class="sin-cargar">❌ Sin disco</span>';
+            plato.elements.label.innerHTML = '🎵';
+        }
+        
+        this.platoIndices[numero] = null;
+    }
+    
+    // ==================== LIMPIEZA ====================
+    
+    limpiar() {
+        if (this.canciones.length === 0) return;
+        if (!confirm('¿Eliminar todas las canciones?')) return;
+        
+        this.canciones.forEach(c => {
+            if (c.url) URL.revokeObjectURL(c.url);
+        });
+        
+        this.canciones = [];
+        this.platoIndices = { 1: null, 2: null };
+        this.indiceActual = 0;
+        
+        this.actualizarLista();
+    }
+    
+    eliminarCancion(index) {
+        if (!confirm('¿Eliminar esta canción de la maleta?')) return;
+        
+        const cancion = this.canciones[index];
+        if (cancion?.url) URL.revokeObjectURL(cancion.url);
+        
+        [1, 2].forEach(plato => {
+            if (this.platoIndices[plato] === index) {
+                this.platoIndices[plato] = null;
+            } else if (this.platoIndices[plato] > index) {
+                this.platoIndices[plato]--;
+            }
+        });
+        
+        this.canciones.splice(index, 1);
+        
+        if (this.modoAutomatico) {
+            if (this.canciones.length === 0) {
+                this.indiceActual = 0;
+            } else {
+                this.indiceActual = Math.min(this.indiceActual, this.canciones.length - 1);
+            }
+        }
+        
+        this.actualizarLista();
+    }
+    
+    // ==================== UTILIDADES ====================
     
     formatTime(seconds) {
         if (!seconds || isNaN(seconds)) return '0:00';
@@ -511,102 +616,8 @@ updateFill(element, val, min, max) {
         }
         return btoa(binary);
     }
-    
-    // Métodos públicos para la biblioteca
-    reproducir() {
-        if (!this.isPlaying) {
-            this.elements.playBtn.click();
-        }
-    }
-    
-    pausar() {
-        if (this.isPlaying) {
-            this.elements.playBtn.click();
-        }
-    }
-    
-    cargarCancion(cancion) {
-        if (cancion.archivo) {
-            this.cargarArchivo(cancion.archivo);
-        }
-    }
-    
-    getTiempoRestante() {
-        if (!this.audio.duration) return 0;
-        return this.audio.duration - this.audio.currentTime;
-    }
-    
-    hacerFadeIn(duracion) {
-        const steps = 30;
-        const stepTime = duracion / steps;
-        const volumenFinal = parseInt(this.elements.vol.value) / 100;
-        const incremento = volumenFinal / steps;
-        let step = 0;
-        
-        this.audio.volume = 0;
-        
-        const interval = setInterval(() => {
-            step++;
-            const nuevoVolumen = Math.min(volumenFinal, this.audio.volume + incremento);
-            this.audio.volume = nuevoVolumen;
-            
-            if (step >= steps || nuevoVolumen >= volumenFinal) {
-                clearInterval(interval);
-                this.audio.volume = volumenFinal;
-            }
-        }, stepTime);
-    }
-    
-    hacerFadeOut(duracion, callback) {
-        const volumenInicial = this.audio.volume;
-        const steps = 100;
-        const stepTime = duracion / steps;
-        const decremento = volumenInicial / steps;
-        let step = 0;
-        
-        const interval = setInterval(() => {
-            step++;
-            const nuevoVolumen = Math.max(0, this.audio.volume - decremento);
-            this.audio.volume = nuevoVolumen;
-            
-            if (step >= steps || nuevoVolumen <= 0) {
-                clearInterval(interval);
-                if (callback) callback();
-            }
-        }, stepTime);
-    }
 }
 
-// ==========================================
-// CLASE PRINCIPAL - ConsolaDJ
-// ==========================================
-
-class ConsolaDJ {
-    constructor() {
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.platos = {};
-        
-        // Crear instancias de platos
-        CONFIG.SELECTORS.PLATOS.forEach(num => {
-            this.platos[num] = new Plato(num, this.audioContext);
-        });
-        
-        // Inicializar contexto suspendido (política de autoplay)
-        this.audioContext.suspend();
-        
-        // Iniciar loop de actualización de progreso
-        this.iniciarUpdateLoop();
-    }
-    
-    iniciarUpdateLoop() {
-        const update = () => {
-            Object.values(this.platos).forEach(plato => plato.updateProgress());
-            requestAnimationFrame(update);
-        };
-        requestAnimationFrame(update);
-    }
-    
-    getPlato(numero) {
-        return this.platos[numero];
-    }
-}
+document.addEventListener('DOMContentLoaded', () => {
+    window.biblioteca = new BibliotecaMusical();
+});
