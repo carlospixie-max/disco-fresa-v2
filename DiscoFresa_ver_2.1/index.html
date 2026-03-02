@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<!-- 
+    DISCO FRESA 🍓 by Carlos Sánchez Sanz
+    Email: carlospixie@gmail.com
+    GitHub: https://github.com/carlospixie-max
+    Versión: 2.1 (Refactorizado)
+    Fecha: 1 de marzo de 2026
+-->
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disco Fresa 🍓</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="consola-general">
+        <!-- CONSOLA 1 (izquierda) -->
+        <div class="consola" data-plato="1">
+            <div class="info-track-consola" id="infoTrack1">
+                <span class="sin-cargar">❌ Sin disco</span>
+            </div>
+            
+            <div class="plato">
+                <div class="boton-superior" id="btn-superior1">📀</div>
+                <div class="disco" id="disco1">
+                    <div class="label" id="label1">🎵</div>
+                    <div class="linea"></div>
+                    <div class="linea2"></div>
+                </div>
+                <div class="plato-botones">
+                    <div class="boton-plato play" id="play1">Play</div>
+                    <div class="boton-plato stop" id="stop1">STOP</div>
+                </div>
+                
+                <div class="disco-progress-container" id="discoProgress1">
+                    <div class="disco-progress-point" id="discoProgressPoint1"></div>
+                </div>
+            </div>
+            
+            <div class="pitch-info" id="rpm1">0 RPM</div>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar1">
+                    <div class="progress-fill" id="progress-fill1"></div>
+                </div>
+                <div class="progress-time">
+                    <span id="progress-current1">0:00</span>
+                    <span id="progress-total1">0:00</span>
+                </div>
+            </div>
+            
+            <div class="controles-consola">
+                <div class="dual-control">
+                    <div class="control-half">
+                        <div class="control-header">
+                            <span>GANANCIA</span>
+                            <span class="valor" id="gain1-val">0.0</span>
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-fill" id="gain1-fill"></div>
+                                <div class="slider-center-marker"></div>
+                            </div>
+                            <input type="range" id="gain1" min="-12" max="12" value="0" step="0.5">
+                        </div>
+                    </div>
+                    
+                    <div class="control-half">
+                        <div class="control-header">
+                            <span>VOLUMEN</span>
+                            <span class="valor" id="vol1-val">70</span>
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-fill" id="vol1-fill"></div>
+                            </div>
+                            <input type="range" id="vol1" min="0" max="100" value="70" step="1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-header">ECUALIZADOR</div>
+                    <div class="eq-container">
+                        <div class="eq-band">
+                            <div class="frecuencia">LOW</div>
+                            <div class="slider-container">
+                                <div class="slider-track">
+                                    <div class="slider-fill" id="eq1-low-fill"></div>
+                                    <div class="slider-center-marker"></div>
+                                </div>
+                                <input type="range" id="eq1-low" min="-12" max="12" value="0" step="0.5">
+                            </div>
+                            <div class="valor" id="eq1-low-val">0.0</div>
+                        </div>
+                        
+                        <div class="eq-band">
+                            <div class="frecuencia">MID</div>
+                            <div class="slider-container">
+                                <div class="slider-track">
+                                    <div class="slider-fill" id="eq1-mid-fill"></div>
+                                    <div class="slider-center-marker"></div>
+                                </div>
+                                <input type="range" id="eq1-mid" min="-12" max="12" value="0" step="0.5">
+                            </div>
+                            <div class="valor" id="eq1-mid-val">0.0</div>
+                        </div>
+                        
+                        <div class="eq-band">
+                            <div class="frecuencia">HIGH</div>
+                            <div class="slider-container">
+                                <div class="slider-track">
+                                    <div class="slider-fill" id="eq1-high-fill"></div>
+                                    <div class="slider-center-marker"></div>
+                                </div>
+                                <input type="range" id="eq1-high" min="-12" max="12" value="0" step="0.5">
+                            </div>
+                            <div class="valor" id="eq1-high-val">0.0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>PITCH</span>
+                        <span class="valor" id="pitch1-val">0</span>
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-track">
+                            <div class="slider-fill" id="pitch1-fill"></div>
+                            <div class="slider-center-marker"></div>
+                        </div>
+                        <input type="range" id="pitch1" min="0.90" max="1.10" step="0.001" value="1.0">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CONSOLA MALETA (centro) -->
+        <div class="consola-maleta">
+            <div class="maleta-titulo">🍓 DISCO FRESA</div>
+            
+            <input type="file" id="file1" accept="audio/*" class="file-input-hidden">
+            <input type="file" id="file2" accept="audio/*" class="file-input-hidden">
+            
+            <div class="modo-selector-container">
+                <span class="modo-label">Manual</span>
+                
+                <div id="selectorModoContainer" class="modo-switch">
+                    <div class="modo-track"></div>
+                    <div id="selectorModoFill" class="modo-fill"></div>
+                    <div class="modo-center"></div>
+                    <div id="selectorModoThumb" class="modo-thumb"></div>
+                    <input type="range" id="selectorModoRange" min="0" max="1" value="0" step="1">
+                </div>
+                
+                <span class="modo-label">Auto</span>
+            </div>
+            
+            <div class="maleta-footer">
+                <div>🍓 <strong>DISCO FRESA</strong> v2.1</div>
+                <div>by Carlos Sánchez Sanz</div>
+                <div>
+                    <a href="https://github.com/carlospixie-max" target="_blank">GitHub: @carlospixie-max</a>
+                </div>
+                <div>carlospixie@gmail.com</div>
+                <div class="fecha">1 de marzo de 2026</div>
+            </div>
+        </div>
+        
+        <!-- CONSOLA 2 (derecha) -->
+        <div class="consola" data-plato="2">
+            <div class="info-track-consola" id="infoTrack2">
+                <span class="sin-cargar">❌ Sin disco</span>
+            </div>
+            
+            <div class="plato">
+                <div class="boton-superior" id="btn-superior2">📀</div>
+                <div class="disco" id="disco2">
+                    <div class="label" id="label2">🎵</div>
+                    <div class="linea"></div>
+                    <div class="linea2"></div>
+                </div>
+                <div class="plato-botones">
+                    <div class="boton-plato play" id="play2">Play</div>
+                    <div class="boton-plato stop" id="stop2">STOP</div>
+                </div>
+                
+                <div class="disco-progress-container" id="discoProgress2">
+                    <div class="disco-progress-point" id="discoProgressPoint2"></div>
+                </div>
+            </div>
+            
+            <div class="pitch-info" id="rpm2">0 RPM</div>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar2">
+                    <div class="progress-fill" id="progress-fill2"></div>
+                </div>
+                <div class="progress-time">
+                    <span id="progress-current2">0:00</span>
+                    <span id="progress-total2">0:00</span>
+                </div>
+            </div>
+            
+            <div class="controles-consola">
+                <div class="dual-control">
+                    <div class="control-half">
+                        <div class="control-header">
+                            <span>GANANCIA</span>
+                            <span class="valor" id="gain2-val">0.0</span>
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-fill" id="gain2-fill"></div>
+                                <div class="slider-center-marker"></div>
+                            </div>
+                            <input type="range" id="gain2" min="-12" max="12" value="0" step="0.5">
+                        </div>
+                    </div>
+                    
+                    <div class="control-half">
+                        <div class="control-header">
+                            <span>VOLUMEN</span>
+                            <span class="valor" id="vol2-val">70</span>
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-fill" id="vol2-fill"></div>
+                            </div>
+                            <input type="range" id="vol2" min="0" max="100" value="70" step="1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-header">ECUALIZADOR</div>
+                    <div class="eq-container">
+                        <div class="eq-band">
+                            <div class="frecuencia">LOW</div>
+                            <div class="slider-container">
+                                <div class="slider-track">
+                                    <div class="slider-fill" id="eq2-low-fill"></div>
+                                    <div class="slider-center-marker"></div>
+                                </div>
+                                <input type="range" id="eq2-low" min="-12" max="12" value="0" step="0.5">
+                            </div>
+                            <div class="valor" id="eq2-low-val">0.0</div>
+                        </div>
+                        
+                        <div class="eq-band">
+                            <div class="frecuencia">MID</div>
+                            <div class="slider-container">
+                                <div class="slider-track">
+                                    <div class="slider-fill" id="eq2-mid-fill"></div>
+                                    <div class="slider-center-marker"></div>
+                                </div>
+                                <input type="range" id="eq2-mid" min="-12" max="12" value="0" step="0.5">
+                            </div>
+                            <div class="valor" id="eq2-mid-val">0.0</div>
+                        </div>
+                        
+                        <div class="eq-band">
+                            <div class="frecuencia">HIGH</div>
+                            <div class="slider-container">
+                                <div class="slider-track">
+                                    <div class="slider-fill" id="eq2-high-fill"></div>
+                                    <div class="slider-center-marker"></div>
+                                </div>
+                                <input type="range" id="eq2-high" min="-12" max="12" value="0" step="0.5">
+                            </div>
+                            <div class="valor" id="eq2-high-val">0.0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>PITCH</span>
+                        <span class="valor" id="pitch2-val">0</span>
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-track">
+                            <div class="slider-fill" id="pitch2-fill"></div>
+                            <div class="slider-center-marker"></div>
+                        </div>
+                        <input type="range" id="pitch2" min="0.90" max="1.10" step="0.001" value="1.0">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <audio id="audio1"></audio>
+    <audio id="audio2"></audio>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/biblioteca.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
